@@ -1,0 +1,7 @@
+{
+  "name": "AgriGuard",
+  "description": "A full-stack application to visualize and search historical pesticide use report (PUR) data with location-based mapping.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

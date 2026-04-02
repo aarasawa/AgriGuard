@@ -1,0 +1,72 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: pesticide_applications
+// Document ID: auto-generated
+// Fields:
+//   - applicationDate: timestamp (required) - Date of application
+//   - pesticideName: string (required) - Name of the pesticide
+//   - cropName: string (required) - Name of the crop
+//   - amountApplied: number (required) - Quantity applied
+//   - unit: string (required) - Unit of measurement
+//   - latitude: number (required) - Latitude coordinate
+//   - longitude: number (required) - Longitude coordinate
+//   - county: string (required) - County name
+//   - siteCode: string (required) - Site identifier
+//   - applicatorName: string (optional) - Name of the applicator
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "AArasawa@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidPesticideApplication(data) {
+      return data.keys().hasAll(['applicationDate', 'pesticideName', 'cropName', 'amountApplied', 'unit', 'latitude', 'longitude', 'county', 'siteCode']) &&
+             data.pesticideName is string && data.pesticideName.size() < 200 &&
+             data.cropName is string && data.cropName.size() < 200 &&
+             data.amountApplied is number &&
+             data.unit is string && data.unit.size() < 50 &&
+             data.latitude is number && data.latitude >= -90 && data.latitude <= 90 &&
+             data.longitude is number && data.longitude >= -180 && data.longitude <= 180 &&
+             data.county is string && data.county.size() < 100 &&
+             data.siteCode is string && data.siteCode.size() < 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /pesticide_applications/{applicationId} {
+      // Allow public read for the explorer
+      allow read: if true;
+      
+      // Only authenticated users can create (for testing/mock data)
+      // In a real app, this might be restricted to admins or ingestion services
+      allow create: if isAuthenticated() && isValidPesticideApplication(request.resource.data);
+      
+      // Only admins can update or delete
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+  }
+}
