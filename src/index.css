@@ -1,1 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  
+  /* Dynamic colors using CSS variables */
+  --color-primary: var(--brand-green);
+  --color-primary-hover: var(--brand-green-hover);
+  
+  --color-cream: #FDFBF7;
+  --color-dark-grey: #1A1C19;
+}
+
+:root:not(.dark) {
+  --brand-green: #2D5A27; /* Darker green for light mode */
+  --brand-green-hover: #1E3D1A;
+  --color-background: var(--color-cream);
+  --color-foreground: #1A1C19; /* Dark gray font */
+}
+
+.dark {
+  --brand-green: #68A357; /* Lighter green for dark mode */
+  --brand-green-hover: #82B373;
+  --color-background: var(--color-dark-grey);
+  --color-foreground: #FDFBF7; /* Cream white font */
+}
+
+@layer base {
+  body {
+    @apply font-sans transition-colors duration-300;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+
+.leaflet-container {
+  @apply rounded-xl border border-slate-200 dark:border-slate-700;
+}
+
+.dark .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}

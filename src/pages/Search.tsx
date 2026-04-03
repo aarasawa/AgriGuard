@@ -47,8 +47,8 @@ export const Search: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Database Search</h1>
-        <p className="text-slate-600 mt-1">Filter and browse the complete historical PUR database.</p>
+        <h1 className="text-4xl font-bold tracking-tight">Database Search</h1>
+        <p className="opacity-70 mt-1">Filter and browse the complete historical PUR database.</p>
       </div>
 
       <SearchFiltersComponent 
@@ -57,14 +57,14 @@ export const Search: React.FC = () => {
         onClear={handleClear} 
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <span className="text-sm font-medium text-slate-600">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+          <span className="text-sm font-medium opacity-60">
             {loading ? 'Searching...' : `Found ${applications.length} records`}
           </span>
         </div>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-700">
           <AnimatePresence mode="popLayout">
             {applications.map((app, index) => (
               <motion.div
@@ -72,40 +72,40 @@ export const Search: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="p-6 hover:bg-slate-50 transition-colors group cursor-pointer"
+                className="p-6 hover:bg-primary/5 transition-colors group cursor-pointer"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
                         {app.pesticideName}
                       </h3>
-                      <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider rounded">
+                      <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider rounded">
                         {app.siteCode}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Sprout className="w-4 h-4 text-slate-400" />
-                        <span>Crop: <span className="font-medium text-slate-900">{app.cropName}</span></span>
+                      <div className="flex items-center gap-2 text-sm opacity-70">
+                        <Sprout className="w-4 h-4 opacity-40" />
+                        <span>Crop: <span className="font-medium text-foreground">{app.cropName}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Droplets className="w-4 h-4 text-slate-400" />
-                        <span>Amount: <span className="font-medium text-slate-900">{app.amountApplied} {app.unit}</span></span>
+                      <div className="flex items-center gap-2 text-sm opacity-70">
+                        <Droplets className="w-4 h-4 opacity-40" />
+                        <span>Amount: <span className="font-medium text-foreground">{app.amountApplied} {app.unit}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        <span>County: <span className="font-medium text-slate-900">{app.county}</span></span>
+                      <div className="flex items-center gap-2 text-sm opacity-70">
+                        <MapPin className="w-4 h-4 opacity-40" />
+                        <span>County: <span className="font-medium text-foreground">{app.county}</span></span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Calendar className="w-4 h-4 text-slate-400" />
-                        <span>Date: <span className="font-medium text-slate-900">{format(app.applicationDate.toDate(), 'PP')}</span></span>
+                      <div className="flex items-center gap-2 text-sm opacity-70">
+                        <Calendar className="w-4 h-4 opacity-40" />
+                        <span>Date: <span className="font-medium text-foreground">{format(app.applicationDate.toDate(), 'PP')}</span></span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-all">
+                  <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full bg-primary/5 group-hover:bg-primary/10 group-hover:text-primary transition-all">
                     <ChevronRight className="w-5 h-5" />
                   </div>
                 </div>
@@ -115,12 +115,12 @@ export const Search: React.FC = () => {
 
           {!loading && applications.length === 0 && (
             <div className="p-12 text-center space-y-4">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                <SearchIcon className="w-8 h-8 text-slate-400" />
+              <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto">
+                <SearchIcon className="w-8 h-8 opacity-30" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-slate-900">No records found</h3>
-                <p className="text-slate-500">Try adjusting your filters or adding mock data from the home page.</p>
+                <h3 className="text-lg font-semibold">No records found</h3>
+                <p className="opacity-60">Try adjusting your filters or adding mock data from the home page.</p>
               </div>
             </div>
           )}
