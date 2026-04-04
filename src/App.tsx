@@ -2,7 +2,8 @@ import React, { useEffect, useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
-import { Map as MapIcon, Database, Leaf, Menu, X, LogIn, LogOut, User, Sun, Moon } from 'lucide-react';
+import { Todos } from './pages/Todos';
+import { Map as MapIcon, Database, Leaf, Menu, X, LogIn, LogOut, User, Sun, Moon, ListTodo } from 'lucide-react';
 import { cn } from './lib/utils';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
@@ -46,6 +47,7 @@ const Navigation = () => {
   const navItems = [
     { path: '/', label: 'Map View', icon: MapIcon },
     { path: '/search', label: 'Database Search', icon: Database },
+    { path: '/todos', label: 'Supabase Todos', icon: ListTodo },
   ];
 
   return (
@@ -209,6 +211,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<Search />} />
+              <Route path="/todos" element={<Todos />} />
             </Routes>
           </main>
           
