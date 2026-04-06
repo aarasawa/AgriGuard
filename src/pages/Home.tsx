@@ -52,28 +52,7 @@ export const Home: React.FC = () => {
       console.error("Login failed:", error);
     }
   };
-
-  const handleAddMockData = async () => {
-    if (!user) {
-      alert("Please sign in to add mock data.");
-      return;
-    }
-    try {
-      await pesticideService.addMockData();
-      alert("Mock data added successfully!");
-    } catch (error) {
-      console.error("Error adding mock data:", error);
-      if (error instanceof Error) {
-        try {
-          const errInfo = JSON.parse(error.message);
-          alert(`Permission Error: ${errInfo.error}\n\nMake sure you are signed in as the admin (AArasawa@gmail.com).`);
-        } catch {
-          alert(`Error adding mock data: ${error.message}`);
-        }
-      }
-    }
-  };
-
+  
   const handleAddressSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address.trim()) return;
@@ -165,32 +144,6 @@ export const Home: React.FC = () => {
             <p className="text-sm text-primary-dark dark:text-primary-light leading-relaxed">
               This map displays Pesticide Use Report (PUR) data. Markers represent specific application sites. 
               The green circle shows your current search radius.
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
-              <Database className="w-5 h-5 opacity-40" />
-              Data Controls
-            </h3>
-            {user ? (
-              <button 
-                onClick={handleAddMockData}
-                className="w-full py-2.5 px-4 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
-              >
-                Populate Mock Data
-              </button>
-            ) : (
-              <button 
-                onClick={handleLogin}
-                className="w-full py-2.5 px-4 bg-primary text-white rounded-xl font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
-              >
-                <LogIn className="w-4 h-4" />
-                Sign In to Manage Data
-              </button>
-            )}
-            <p className="text-[10px] opacity-50 mt-3 text-center">
-              {user ? 'Click to add sample records to your Firestore database.' : 'Authentication is required to modify the database.'}
             </p>
           </div>
 

@@ -2,8 +2,7 @@ import React, { useEffect, useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
-import { Todos } from './pages/Todos';
-import { Map as MapIcon, Database, Leaf, Menu, X, LogIn, LogOut, User, Sun, Moon, ListTodo } from 'lucide-react';
+import { Map as MapIcon, Database, Leaf, Menu, X, LogIn, LogOut, User, Sun, Moon } from 'lucide-react';
 import { cn } from './lib/utils';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
@@ -47,7 +46,6 @@ const Navigation = () => {
   const navItems = [
     { path: '/', label: 'Map View', icon: MapIcon },
     { path: '/search', label: 'Database Search', icon: Database },
-    { path: '/todos', label: 'Supabase Todos', icon: ListTodo },
   ];
 
   return (
@@ -211,7 +209,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/todos" element={<Todos />} />
             </Routes>
           </main>
           
@@ -223,7 +220,7 @@ export default function App() {
                   <span className="text-lg font-bold">AgriGuard</span>
                 </div>
                 <p className="text-sm opacity-60">
-                  &copy; 2024 AgriGuard PUR Data Explorer. All rights reserved.
+                  &copy; 2026 AgriGuard. All rights reserved.
                 </p>
                 <div className="flex items-center gap-6 text-sm font-medium opacity-70">
                   <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>

@@ -104,51 +104,5 @@ export const pesticideService = {
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, COLLECTION_NAME);
     });
-  },
-
-  async addMockData() {
-    const mockData = [
-      {
-        applicationDate: Timestamp.fromDate(new Date('2024-03-15')),
-        pesticideName: 'Glyphosate',
-        cropName: 'Corn',
-        amountApplied: 2.5,
-        unit: 'lbs/acre',
-        latitude: 38.5816,
-        longitude: -121.4944,
-        county: 'Sacramento',
-        siteCode: 'SITE-001'
-      },
-      {
-        applicationDate: Timestamp.fromDate(new Date('2024-03-20')),
-        pesticideName: 'Atrazine',
-        cropName: 'Sorghum',
-        amountApplied: 1.8,
-        unit: 'lbs/acre',
-        latitude: 38.5751,
-        longitude: -121.4704,
-        county: 'Sacramento',
-        siteCode: 'SITE-002'
-      },
-      {
-        applicationDate: Timestamp.fromDate(new Date('2024-03-25')),
-        pesticideName: 'Malathion',
-        cropName: 'Almonds',
-        amountApplied: 3.2,
-        unit: 'lbs/acre',
-        latitude: 38.6000,
-        longitude: -121.5000,
-        county: 'Sacramento',
-        siteCode: 'SITE-003'
-      }
-    ];
-
-    for (const data of mockData) {
-      try {
-        await addDoc(collection(db, COLLECTION_NAME), data);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, COLLECTION_NAME);
-      }
-    }
   }
 };
