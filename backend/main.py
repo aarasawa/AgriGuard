@@ -5,10 +5,13 @@ import os
 from dotenv import load_dotenv
 from typing import Optional
 
+# load env file for reference
 load_dotenv()
 
+# instantiate FastAPI app
 app = FastAPI(title="AgriGuard API")
 
+# unsure. allow parameter options for middleware
 app.add_middleware(
   CORSMiddleware,
   allow_origins=["*"],
@@ -16,13 +19,16 @@ app.add_middleware(
   allow_headers=["*"],
 )
 
+# create supabase client for connecting to db
 supabase = create_client(
   os.getenv("VITE_SUPABASE_URL"),
   os.getenv("VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY")
 )
 
+# create GET method at '/records'
 @app.get("/records")
 def get_records(
+    # optional parameters to request
     county_cd: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     min_lat: Optional[float] = Query(None),
@@ -69,7 +75,6 @@ def get_records(
                 }
             })
 
-    # result = supabase.rpc("get_records_with_coords", params).execute()
     # print("PARAMS:", params)
     # print("DATA:", result.data)
     # print("COUNT:", len(result.data) if result.data else 0)
