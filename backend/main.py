@@ -69,10 +69,10 @@ def get_records(
                 }
             })
 
-    result = supabase.rpc("get_records_with_coords", params).execute()
-    print("PARAMS:", params)
-    print("DATA:", result.data)
-    print("COUNT:", len(result.data) if result.data else 0)
+    # result = supabase.rpc("get_records_with_coords", params).execute()
+    # print("PARAMS:", params)
+    # print("DATA:", result.data)
+    # print("COUNT:", len(result.data) if result.data else 0)
 
     return {"type": "FeatureCollection", "features": features}
 
