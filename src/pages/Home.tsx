@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Map } from '../components/Map';
-import { MapPin, Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
+import { Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const Home: React.FC = () => {
