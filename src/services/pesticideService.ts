@@ -1,108 +1,61 @@
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  addDoc, 
-  Timestamp,
-  orderBy,
-  limit,
-  onSnapshot
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-import { PesticideApplication, SearchFilters } from '../types';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-const COLLECTION_NAME = 'pesticide_applications';
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+export interface PesticideFeature {
+  type: 'Feature';
+  geometry: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  properties: {
+    comtrs: string;
+    applic_dt: string;
+    lbs_prd_used: number;
+    site_code: number;
+    county_cd: number;
+    prodno: number;
+  };
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  }
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+export interface PesticideFeatureCollection {
+  type: 'FeatureCollection';
+  features: PesticideFeature[];
 }
 
 export const pesticideService = {
-  async getAll(filters?: SearchFilters): Promise<PesticideApplication[]> {
-    try {
-      let q = query(collection(db, COLLECTION_NAME), orderBy('applicationDate', 'desc'), limit(100));
+  async getRecords(params: {
+    county_cd?: number;
+    year?: number;
+    min_lat?: number;
+    max_lat?: number;
+    min_lon?: number;
+    max_lon?: number;
+    limit?: number;
+  }): Promise<PesticideFeatureCollection> {
+    const url = new URL(`${API_BASE_URL}/records`);
 
-      if (filters) {
-        if (filters.pesticideName) {
-          q = query(q, where('pesticideName', '==', filters.pesticideName));
-        }
-        if (filters.cropName) {
-          q = query(q, where('cropName', '==', filters.cropName));
-        }
-        if (filters.county) {
-          q = query(q, where('county', '==', filters.county));
-        }
-        if (filters.startDate) {
-          q = query(q, where('applicationDate', '>=', Timestamp.fromDate(filters.startDate)));
-        }
-        if (filters.endDate) {
-          q = query(q, where('applicationDate', '<=', Timestamp.fromDate(filters.endDate)));
-        }
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        url.searchParams.set(key, String(value));
       }
+    });
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PesticideApplication));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, COLLECTION_NAME);
-      return [];
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
+    return response.json();
   },
 
-  subscribeToApplications(callback: (apps: PesticideApplication[]) => void) {
-    const q = query(collection(db, COLLECTION_NAME), orderBy('applicationDate', 'desc'), limit(200));
-    return onSnapshot(q, (snapshot) => {
-      const apps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PesticideApplication));
-      callback(apps);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, COLLECTION_NAME);
-    });
+  async getChemicals(county_cd?: number): Promise<number[]> {
+    const url = new URL(`${API_BASE_URL}/chemicals`);
+    if (county_cd !== undefined) {
+      url.searchParams.set('county_cd', String(county_cd));
+    }
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.chemicals;
   }
 };

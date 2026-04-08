@@ -2,10 +2,8 @@ import React, { useEffect, useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
-import { Map as MapIcon, Database, Leaf, Menu, X, LogIn, LogOut, User, Sun, Moon } from 'lucide-react';
+import { Map as MapIcon, Database, Leaf, Menu, X, Sun, Moon } from 'lucide-react';
 import { cn } from './lib/utils';
-import { auth } from './lib/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import Cookies from 'js-cookie';
 
 const ThemeContext = createContext<{ darkMode: boolean; toggleDarkMode: () => void }>({
@@ -16,32 +14,7 @@ const ThemeContext = createContext<{ darkMode: boolean; toggleDarkMode: () => vo
 const Navigation = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<FirebaseUser | null>(null);
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
   const navItems = [
     { path: '/', label: 'Map View', icon: MapIcon },
@@ -76,9 +49,9 @@ const Navigation = () => {
                 {item.label}
               </Link>
             ))}
-            
+
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2" />
-            
+
             <button
               onClick={toggleDarkMode}
               className="p-2 text-foreground/70 hover:bg-primary/5 rounded-lg transition-all"
@@ -86,38 +59,6 @@ const Navigation = () => {
             >
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
-
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-2" />
-
-            {user ? (
-              <div className="flex items-center gap-3 pl-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-lg border border-primary/10">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || ''} className="w-5 h-5 rounded-full" referrerPolicy="no-referrer" />
-                  ) : (
-                    <User className="w-4 h-4 text-slate-400" />
-                  )}
-                  <span className="text-xs font-medium max-w-[100px] truncate">
-                    {user.displayName || user.email}
-                  </span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleLogin}
-                className="ml-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-all flex items-center gap-2"
-              >
-                <LogIn className="w-4 h-4" />
-                Sign In
-              </button>
-            )}
           </div>
 
           {/* Mobile menu button */}
@@ -157,25 +98,6 @@ const Navigation = () => {
               {item.label}
             </Link>
           ))}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            {user ? (
-              <button
-                onClick={() => { handleLogout(); setIsOpen(false); }}
-                className="w-full px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3"
-              >
-                <LogOut className="w-5 h-5" />
-                Logout
-              </button>
-            ) : (
-              <button
-                onClick={() => { handleLogin(); setIsOpen(false); }}
-                className="w-full px-4 py-3 rounded-xl text-base font-medium text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3"
-              >
-                <LogIn className="w-5 h-5" />
-                Sign In with Google
-              </button>
-            )}
-          </div>
         </div>
       )}
     </nav>
@@ -211,7 +133,7 @@ export default function App() {
               <Route path="/search" element={<Search />} />
             </Routes>
           </main>
-          
+
           <footer className="bg-white dark:bg-dark-grey border-t border-slate-200 dark:border-slate-800 py-12 mt-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row justify-between items-center gap-6">
