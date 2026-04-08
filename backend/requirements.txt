@@ -1,4 +1,4 @@
 fastapi
 uvicorn
-supabase
+psycopg[binary]
 python-dotenv

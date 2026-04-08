@@ -1,61 +1,82 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client
+import psycopg
 import os
 from dotenv import load_dotenv
 from typing import Optional
 
-# load env file for reference
+# load .env file from root
 load_dotenv()
 
 # instantiate FastAPI app
 app = FastAPI(title="AgriGuard API")
 
-# unsure. allow parameter options for middleware
+# configure allowed origins, HTTP methods, and headers for requests
 app.add_middleware(
-  CORSMiddleware,
-  allow_origins=["*"],
-  allow_methods=["GET"],
-  allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"]
 )
 
-# create supabase client for connecting to db
-supabase = create_client(
-  os.getenv("VITE_SUPABASE_URL"),
-  os.getenv("VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY")
-)
+# establish a connection to PG db
+def get_conn():
+    return psycopg.connect(os.getenv("DATABASE_URL"))
 
-# create GET method at '/records'
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.get("/records")
 def get_records(
-    # optional parameters to request
     county_cd: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     min_lat: Optional[float] = Query(None),
     max_lat: Optional[float] = Query(None),
     min_lon: Optional[float] = Query(None),
     max_lon: Optional[float] = Query(None),
-    limit: int = Query(500, le=2000)
+    limit: int = Query(200, le=2000)
 ):
-    params = {"p_limit": limit}
-    
-    if county_cd is not None:
-        params["p_county_cd"] = county_cd
-    if year is not None:
-        params["p_year"] = year
-    if min_lat is not None:
-        params["p_min_lat"] = min_lat
-    if max_lat is not None:
-        params["p_max_lat"] = max_lat
-    if min_lon is not None:
-        params["p_min_lon"] = min_lon
-    if max_lon is not None:
-        params["p_max_lon"] = max_lon
+    query= """
+        SELECT
+            p.comtrs, p.applic_dt, p.lbs_prd_used, p.site_code, p.county_cd,
+            p.prodno, l.cen_lat83, l.cen_long83
+        FROM pur_data p
+        JOIN plss_lookup l ON p.comtrs = l.co_mtrs
+        WHERE p.ag_ind = 'A'
+        AND p.comtrs IS NOT NULL
+    """
+    params = []
 
-    result = supabase.rpc("get_records_with_coords", params).execute()
+    if county_cd is not None:
+        query += " AND p.county_cd = %s"
+        params.append(county_cd)
+    if year is not None:
+        query += " AND p.year = %s"
+        params.append(year)
+    if min_lat is not None:
+        query += " AND l.cen_lat83 >= %s"
+        params.append(min_lat)
+    if max_lat is not None:
+        query += " AND l.cen_lat83 <= %s"
+        params.append(max_lat)
+    if min_lon is not None:
+        query += " AND l.cen_long83 >= %s"
+        params.append(min_lon)
+    if max_lon is not None:
+        query += " AND l.cen_long83 <= %s"
+        params.append(max_lon)
+    
+    query += " LIMIT %s"
+    params.append(limit)
+
+    with get_conn() as conn: 
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
 
     features = []
-    for row in result.data:
+    for row in rows:
         lat = row.get("cen_lat83")
         lon = row.get("cen_long83")
         if lat and lon:
@@ -74,50 +95,21 @@ def get_records(
                     "prodno": row.get("prodno")
                 }
             })
-
-    # print("PARAMS:", params)
-    # print("DATA:", result.data)
-    # print("COUNT:", len(result.data) if result.data else 0)
-
-    return {"type": "FeatureCollection", "features": features}
-
+    return {"type": "Featurecollection", "features": features}
+    
 @app.get("/chemicals")
-def get_chemicals(county_cd: Optional[str] = Query(None)):
-    query = supabase.table("pur_2023") \
-        .select("prodno") \
-        .eq("ag_ind", "A") \
-        .limit(1000)
+def get_chemicals(
+    county_cd: Optional[int] = Query(None)
+):
+    query = "SELECT DISTINCT prodno FROM pur_data WHERE ag_ind = 'A'"
+    params = []
+    if county_cd is not None:
+        query += " AND county_cd = %s"
+        params.append(county_cd)
     
-    if county_cd:
-        query = query.eq("county_cd", county_cd)
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            prodnos = sorted([row[0] for row in cur.fetchall() if row[0]])
     
-    result = query.execute()
-    prodnos = sorted(set(r["prodno"] for r in result.data if r.get("prodno")))
     return {"chemicals": prodnos}
-
-""" @app.get("/debug")
-def debug():
-    try:
-        result = supabase.rpc("get_records_with_coords", {
-            "p_county_cd": 42,
-            "p_limit": 5
-        }).execute()
-        return {
-            "data": result.data,
-            "count": len(result.data) if result.data else 0
-        }
-    except Exception as e:
-        return {"error": str(e)} """
-    
-""" @app.get("/debug2")
-def debug2():
-    try:
-        result = supabase.table("test_data") \
-            .select("comtrs, county_cd, ag_ind") \
-            .eq("county_cd", 42) \
-            .eq("ag_ind", "A") \
-            .limit(5) \
-            .execute()
-        return {"data": result.data, "count": len(result.data)}
-    except Exception as e:
-        return {"error": str(e)} """
