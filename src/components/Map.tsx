@@ -20,6 +20,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapProps {
   userLocation: [number, number] | null;
   radius: number;
+  onLocationChange: (lat: number, lon: number) => void;
 }
 
 function ChangeView({ center, zoom }: { center: [number, number]; zoom?: number }) {
@@ -31,6 +32,71 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom?: number 
       map.setView(center, map.getZoom());
     }
   }, [center, zoom, map]);
+  return null;
+}
+
+function LocateControl({ onLocate }: { onLocate: (lat: number, lon: number) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const control = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function () {
+        const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+        btn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" 
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
+               stroke-linejoin="round" style="display:block;margin:auto">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            <circle cx="12" cy="12" r="8" stroke-dasharray="4"/>
+          </svg>
+        `;
+        btn.style.cssText = `
+          width: 30px;
+          height: 30px;
+          background: white;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #444;
+          font-size: 18px;
+          padding: 0;
+        `;
+        btn.title = 'Go to my location';
+
+        L.DomEvent.on(btn, 'click', function (e) {
+          L.DomEvent.stopPropagation(e);
+          if (!navigator.geolocation) return;
+          btn.style.color = '#22c55e';
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const { latitude, longitude } = pos.coords;
+              map.setView([latitude, longitude], 13, { animate: true });
+              onLocate(latitude, longitude);
+              btn.style.color = '#444';
+            },
+            () => {
+              btn.style.color = '#ef4444';
+              setTimeout(() => { btn.style.color = '#444'; }, 2000);
+            }
+          );
+        });
+
+        return btn;
+      }
+    });
+
+    const instance = new control();
+    map.addControl(instance);
+
+    return () => {
+      map.removeControl(instance);
+    };
+  }, [map]);
+
   return null;
 }
 
@@ -69,7 +135,7 @@ function ClusteredMarkers({ features, onMarkerClick }: {
   return null;
 }
 
-export const Map: React.FC<MapProps> = ({ userLocation, radius }) => {
+export const Map: React.FC<MapProps> = ({ userLocation, radius, onLocationChange }) => {
   const [features, setFeatures] = useState<PesticideFeature[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<PesticideFeature | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
@@ -164,6 +230,8 @@ export const Map: React.FC<MapProps> = ({ userLocation, radius }) => {
             />
           </>
         )}
+
+        <LocateControl onLocate={onLocationChange} />
 
         <ClusteredMarkers
           features={features}

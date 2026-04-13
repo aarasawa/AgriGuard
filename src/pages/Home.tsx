@@ -107,6 +107,7 @@ export const Home: React.FC = () => {
             <Map
               userLocation={userLocation}
               radius={radius}
+              onLocationChange={(lat, lon) => setUserLocation([lat, lon])}
             />
           </motion.div>
         </div>
