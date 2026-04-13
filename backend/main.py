@@ -29,46 +29,48 @@ def health():
 
 @app.get("/records")
 def get_records(
-    county_cd: Optional[int] = Query(None),
-    year: Optional[int] = Query(None),
-    min_lat: Optional[float] = Query(None),
-    max_lat: Optional[float] = Query(None),
-    min_lon: Optional[float] = Query(None),
-    max_lon: Optional[float] = Query(None),
-    limit: int = Query(200, le=2000)
+    lat: float = Query(...),
+    lon: float = Query(...),
+    radius_km: float = Query(5.0, le=10.0),
 ):
     query = """
         SELECT
             comtrs, applic_dt, lbs_prd_used,
             site_code, county_cd, prodno,
-            cen_lat83, cen_long83
+            cen_lat83, cen_long83,
+            ROUND((
+                6371 * acos(
+                    LEAST(1.0,
+                        cos(radians(%s))
+                        * cos(radians(cen_lat83))
+                        * cos(radians(cen_long83) - radians(%s))
+                        + sin(radians(%s))
+                        * sin(radians(cen_lat83))
+                    )
+                )
+            )::numeric, 2) AS distance_km
         FROM pur_applications
-        WHERE cen_lat83 IS NOT NULL
-        AND cen_long83 IS NOT NULL
+        WHERE cen_lat83 BETWEEN %s - (%s / 111.0) AND %s + (%s / 111.0)
+        AND cen_long83 BETWEEN %s - (%s / 111.0) AND %s + (%s / 111.0)
+        AND (
+            6371 * acos(
+                LEAST(1.0,
+                    cos(radians(%s))
+                    * cos(radians(cen_lat83))
+                    * cos(radians(cen_long83) - radians(%s))
+                    + sin(radians(%s))
+                    * sin(radians(cen_lat83))
+                )
+            )
+        ) <= %s
+        ORDER BY distance_km
     """
-    params = []
-
-    if county_cd is not None:
-        query += " AND county_cd = %s"
-        params.append(county_cd)
-    if year is not None:
-        query += " AND year = %s"
-        params.append(year)
-    if min_lat is not None:
-        query += " AND cen_lat83 >= %s"
-        params.append(min_lat)
-    if max_lat is not None:
-        query += " AND cen_lat83 <= %s"
-        params.append(max_lat)
-    if min_lon is not None:
-        query += " AND cen_long83 >= %s"
-        params.append(min_lon)
-    if max_lon is not None:
-        query += " AND cen_long83 <= %s"
-        params.append(max_lon)
-
-    query += " LIMIT %s"
-    params.append(limit)
+    params = [
+        lat, lon, lat, 
+        lat, radius_km, lat, radius_km, 
+        lon, radius_km, lon, radius_km, 
+        lat, lon, lat, radius_km
+    ]
 
     with get_conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
@@ -77,14 +79,14 @@ def get_records(
 
     features = []
     for row in rows:
-        lat = row.get("cen_lat83")
-        lon = row.get("cen_long83")
-        if lat and lon:
+        lat_val = row.get("cen_lat83")
+        lon_val = row.get("cen_long83")
+        if lat_val and lon_val:
             features.append({
                 "type": "Feature",
                 "geometry": {
                     "type": "Point",
-                    "coordinates": [float(lon), float(lat)]
+                    "coordinates": [float(lon_val), float(lat_val)]
                 },
                 "properties": {
                     "comtrs": row.get("comtrs"),
@@ -92,11 +94,20 @@ def get_records(
                     "lbs_prd_used": row.get("lbs_prd_used"),
                     "site_code": row.get("site_code"),
                     "county_cd": row.get("county_cd"),
-                    "prodno": row.get("prodno")
+                    "prodno": row.get("prodno"),
+                    "distance_km": float(row.get("distance_km", 0))
                 }
             })
 
-    return {"type": "FeatureCollection", "features": features}
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "meta": {
+            "center": {"lat": lat, "lon": lon},
+            "radius_km": radius_km,
+            "count": len(features)
+        }
+    }
     
 @app.get("/chemicals")
 def get_chemicals(
