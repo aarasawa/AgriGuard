@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface PesticideFeature {
@@ -7,6 +9,7 @@ export interface PesticideFeature {
     coordinates: [number, number]; // [longitude, latitude]
   };
   properties: {
+    distance_km: ReactNode;
     comtrs: string;
     applic_dt: string;
     lbs_prd_used: number;
@@ -19,30 +22,26 @@ export interface PesticideFeature {
 export interface PesticideFeatureCollection {
   type: 'FeatureCollection';
   features: PesticideFeature[];
+  meta?: {
+    center: { lat: number; lon: number };
+    radius_km: number;
+    count: number;
+    limit?: number;
+  };
 }
 
 export const pesticideService = {
   async getRecords(params: {
-    county_cd?: number;
-    year?: number;
-    min_lat?: number;
-    max_lat?: number;
-    min_lon?: number;
-    max_lon?: number;
-    limit?: number;
+    lat: number;
+    lon: number;
+    radius_km: number;
   }): Promise<PesticideFeatureCollection> {
     const url = new URL(`${API_BASE_URL}/records`);
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        url.searchParams.set(key, String(value));
-      }
-    });
-
+    url.searchParams.set('lat', String(params.lat));
+    url.searchParams.set('lon', String(params.lon));
+    url.searchParams.set('radius_km', String(params.radius_km));
     const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
     return response.json();
   },
 

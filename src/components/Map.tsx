@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import L from 'leaflet';
+import 'leaflet.markercluster';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, MapPin, Droplets, Info, ExternalLink } from 'lucide-react';
 import { pesticideService, PesticideFeature } from '../services/pesticideService';
@@ -20,7 +20,6 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapProps {
   userLocation: [number, number] | null;
   radius: number;
-  countyCode?: number;
 }
 
 function ChangeView({ center, zoom }: { center: [number, number]; zoom?: number }) {
@@ -35,30 +34,74 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom?: number 
   return null;
 }
 
-export const Map: React.FC<MapProps> = ({ userLocation, radius, countyCode = 42 }) => {
+function ClusteredMarkers({ features, onMarkerClick }: {
+  features: PesticideFeature[];
+  onMarkerClick: (f: PesticideFeature) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!features.length) return;
+
+    const cluster = (L as any).markerClusterGroup();
+
+    features.forEach((feature) => {
+      const [lon, lat] = feature.geometry.coordinates;
+      const marker = L.marker([lat, lon]);
+      marker.bindPopup(`
+        <div style="padding: 4px">
+          <strong style="font-size: 13px">Section ${feature.properties.comtrs}</strong><br/>
+          <span style="font-size: 11px; color: #666">${feature.properties.applic_dt}</span><br/>
+          <span style="font-size: 11px; color: #666">${feature.properties.distance_km}km away</span>
+        </div>
+      `);
+      marker.on('click', () => onMarkerClick(feature));
+      cluster.addLayer(marker);
+    });
+
+    map.addLayer(cluster);
+
+    return () => {
+      map.removeLayer(cluster);
+    };
+  }, [features, map]);
+
+  return null;
+}
+
+export const Map: React.FC<MapProps> = ({ userLocation, radius }) => {
   const [features, setFeatures] = useState<PesticideFeature[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<PesticideFeature | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
 
-  const defaultCenter: [number, number] = [34.7, -119.9]; // Santa Barbara area
-  const initialCenter = userLocation || defaultCenter;
+  const defaultCenter: [number, number] = [36.7783, -119.4179];
+  const center = userLocation || defaultCenter;
+  const radius_km = radius / 1000;
+  const centerLat = center[0];
+  const centerLon = center[1];
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    pesticideService.getRecords({ county_cd: countyCode, limit: 200 })
+    pesticideService.getRecords({
+      lat: centerLat,
+      lon: centerLon,
+      radius_km
+    })
       .then(geojson => {
         setFeatures(geojson.features);
+        setCount(geojson.meta?.count || geojson.features.length);
         setLoading(false);
       })
       .catch(err => {
         setError(err.message);
         setLoading(false);
       });
-  }, [countyCode]);
+  }, [centerLat, centerLon, radius_km]);
 
   const handleMarkerClick = (feature: PesticideFeature) => {
     setSelectedFeature(feature);
@@ -71,8 +114,21 @@ export const Map: React.FC<MapProps> = ({ userLocation, radius, countyCode = 42 
     <div className="relative h-[600px] w-full rounded-xl overflow-hidden shadow-lg border border-slate-200 bg-slate-100">
 
       {loading && (
-        <div className="absolute inset-0 z-[1002] flex items-center justify-center bg-white/70">
-          <p className="text-slate-600 font-medium">Loading pesticide data...</p>
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1002] bg-white/90 px-4 py-2 rounded-full shadow text-sm font-medium text-slate-600 flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+          Loading...
+        </div>
+      )}
+
+      {!loading && count > 0 && (
+        <div className="absolute top-3 left-3 z-[1002] bg-white/90 px-3 py-1.5 rounded-full shadow text-xs font-medium text-slate-600">
+          {count.toLocaleString()} applications within {radius_km}km
+        </div>
+      )}
+
+      {!loading && count === 0 && !error && (
+        <div className="absolute top-3 left-3 z-[1002] bg-white/90 px-3 py-1.5 rounded-full shadow text-xs font-medium text-slate-500">
+          No applications found in this area
         </div>
       )}
 
@@ -83,7 +139,7 @@ export const Map: React.FC<MapProps> = ({ userLocation, radius, countyCode = 42 
       )}
 
       <MapContainer
-        center={initialCenter}
+        center={center}
         zoom={11}
         scrollWheelZoom={true}
         className="h-full w-full z-0"
@@ -109,26 +165,11 @@ export const Map: React.FC<MapProps> = ({ userLocation, radius, countyCode = 42 
           </>
         )}
 
-        <MarkerClusterGroup>
-          {features.map((feature, index) => {
-            const [lon, lat] = feature.geometry.coordinates;
-            return (
-              <Marker
-                key={`${feature.properties.comtrs}-${index}`}
-                position={[lat, lon]}
-                eventHandlers={{ click: () => handleMarkerClick(feature) }}
-              >
-                <Popup>
-                  <div className="p-1">
-                    <h3 className="font-bold text-slate-900">Section {feature.properties.comtrs}</h3>
-                    <p className="text-xs text-slate-500">{feature.properties.applic_dt}</p>
-                    <p className="text-xs text-slate-500">Click for details</p>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MarkerClusterGroup>
+        <ClusteredMarkers
+          features={features}
+          onMarkerClick={handleMarkerClick}
+        />
+
       </MapContainer>
 
       <AnimatePresence>
@@ -196,6 +237,9 @@ export const Map: React.FC<MapProps> = ({ userLocation, radius, countyCode = 42 
                     <p className="text-xs text-slate-400 font-medium uppercase">Location</p>
                     <p className="text-sm font-semibold text-slate-900">
                       County {selectedFeature.properties.county_cd}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {selectedFeature.properties.distance_km}km from your location
                     </p>
                     <p className="text-[10px] text-slate-400">
                       Product: {selectedFeature.properties.prodno}

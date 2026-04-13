@@ -84,15 +84,15 @@ export const Home: React.FC = () => {
                 Radius: {radius / 1000}km
               </span>
             </div>
-            <input
-              type="range"
-              min="1000"
-              max="50000"
-              step="1000"
-              value={radius}
-              onChange={(e) => setRadius(parseInt(e.target.value))}
-              className="w-24 sm:w-32 accent-primary"
-            />
+              <input
+                type="range"
+                min="1000"
+                max="10000"
+                step="1000"
+                value={radius}
+                onChange={(e) => setRadius(parseInt(e.target.value))}
+                className="w-24 sm:w-32 accent-primary"
+              />
           </div>
         </div>
       </div>
@@ -107,7 +107,6 @@ export const Home: React.FC = () => {
             <Map
               userLocation={userLocation}
               radius={radius}
-              countyCode={42}
             />
           </motion.div>
         </div>
