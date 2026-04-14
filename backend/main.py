@@ -2,6 +2,8 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import psycopg
 import os
+from functools import lru_cache
+import httpx
 from dotenv import load_dotenv
 from typing import Optional
 
@@ -130,6 +132,7 @@ def get_chemicals(
 def search_records(
     county_cd: Optional[int] = Query(None),
     prodno: Optional[int] = Query(None),
+    product_name: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     limit: int = Query(100, le=500)
@@ -137,7 +140,9 @@ def search_records(
     query = """
         SELECT
             comtrs, applic_dt, lbs_prd_used,
-            site_code, county_cd, prodno, year
+            site_code, county_cd, prodno,
+            product_name, year,
+            cen_lat83, cen_long83
         FROM pur_applications
         WHERE cen_lat83 IS NOT NULL
     """
@@ -149,6 +154,9 @@ def search_records(
     if prodno is not None:
         query += " AND prodno = %s"
         params.append(prodno)
+    if product_name:
+        query += " AND product_name ILIKE %s"
+        params.append(f"%{product_name}%")
     if start_date:
         query += " AND TO_DATE(applic_dt, 'DD-MON-YYYY') >= TO_DATE(%s, 'YYYY-MM-DD')"
         params.append(start_date)
@@ -168,3 +176,103 @@ def search_records(
         "results": [dict(row) for row in rows],
         "count": len(rows)
     }
+
+@lru_cache(maxsize=500)
+def fetch_pubchem_data(cas_number: str):
+    try:
+        # Step 1 — get CID from CAS
+        cid_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{cas_number}/cids/JSON"
+        r = httpx.get(cid_url, timeout=5)
+        if r.status_code != 200:
+            return None
+        cid = r.json()["IdentifierList"]["CID"][0]
+
+        # Step 2 — fetch Safety and Hazards section
+        view_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Safety+and+Hazards"
+        r2 = httpx.get(view_url, timeout=10)
+        if r2.status_code != 200:
+            return None
+
+        data = r2.json()
+        result = {
+            "cid": cid,
+            "pubchem_url": f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}#section=Safety-and-Hazards",
+            "signal_word": None,
+            "pictograms": [],
+            "hazard_statements": [],
+            "symptoms": None,
+            "exposure_routes": None,
+            "target_organs": None,
+            "short_term_effects": None,
+            "long_term_effects": None,
+            "first_aid": {}
+        }
+
+        def get_strings(info_list):
+            return [
+                s.get("String", "")
+                for item in info_list
+                for s in item.get("Value", {}).get("StringWithMarkup", [])
+                if s.get("String", "").strip()
+            ]
+
+        def walk_sections(sections):
+            for section in sections:
+                heading = section.get("TOCHeading", "")
+                info = section.get("Information", [])
+
+                if heading == "GHS Classification":
+                    for item in info:
+                        name = item.get("Name", "")
+                        strings = item.get("Value", {}).get("StringWithMarkup", [])
+                        if name == "Signal":
+                            result["signal_word"] = strings[0]["String"] if strings else None
+                        elif name == "GHS Hazard Statements":
+                            result["hazard_statements"] = [
+                                s["String"] for s in strings if s.get("String", "").strip()
+                            ]
+                        elif name == "Pictogram(s)":
+                            for s in strings:
+                                for markup in s.get("Markup", []):
+                                    if markup.get("Extra"):
+                                        result["pictograms"].append(markup["Extra"])
+
+                elif heading == "Health Hazards" and info:
+                    texts = get_strings(info)
+                    for text in texts:
+                        if text.startswith("Exposure Routes:"):
+                            result["exposure_routes"] = text.replace("Exposure Routes:", "").strip()
+                        elif text.startswith("Symptoms:"):
+                            result["symptoms"] = text.replace("Symptoms:", "").strip()
+                        elif text.startswith("Target Organs:"):
+                            result["target_organs"] = text.replace("Target Organs:", "").strip()
+
+                elif heading == "Effects of Short Term Exposure" and info:
+                    texts = get_strings(info)
+                    if texts:
+                        result["short_term_effects"] = texts[0]
+
+                elif heading == "Effects of Long Term Exposure" and info:
+                    texts = get_strings(info)
+                    if texts:
+                        result["long_term_effects"] = texts[0]
+
+                elif heading == "First Aid Measures":
+                    for item in info:
+                        name = item.get("Name", "")
+                        strings = item.get("Value", {}).get("StringWithMarkup", [])
+                        text = strings[0]["String"] if strings else ""
+                        if name and text:
+                            result["first_aid"][name] = text
+
+                # recurse into subsections
+                if "Section" in section:
+                    walk_sections(section["Section"])
+
+        top_sections = data.get("Record", {}).get("Section", [])
+        walk_sections(top_sections)
+
+        return result
+    except Exception as e:
+        print(f"PubChem fetch error for {cas_number}: {e}")
+        return None

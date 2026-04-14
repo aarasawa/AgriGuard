@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
+import { COUNTY_NAMES } from '../constants';
 import { SearchFiltersComponent, SearchFilters } from '../components/SearchFilters';
 import { pesticideService } from '../services/pesticideService';
-import { Calendar, MapPin, Droplets, Hash, Search as SearchIcon, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, Droplets, Search as SearchIcon, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface SearchResult {
@@ -11,24 +12,11 @@ interface SearchResult {
     site_code: number;
     county_cd: number;
     prodno: number;
+    product_name: string | null;
     year: number;
+    cen_lat83: number;
+    cen_long83: number;
 }
-
-// CDPR county code to name lookup
-const COUNTY_NAMES: Record<number, string> = {
-    1:'Alameda',2:'Alpine',3:'Amador',4:'Butte',5:'Calaveras',
-    6:'Colusa',7:'Contra Costa',8:'Del Norte',9:'El Dorado',10:'Fresno',
-    11:'Glenn',12:'Humboldt',13:'Imperial',14:'Inyo',15:'Kern',
-    16:'Kings',17:'Lake',18:'Lassen',19:'Los Angeles',20:'Madera',
-    21:'Marin',22:'Mariposa',23:'Mendocino',24:'Merced',25:'Modoc',
-    26:'Mono',27:'Monterey',28:'Napa',29:'Nevada',30:'Orange',
-    31:'Placer',32:'Plumas',33:'Riverside',34:'Sacramento',35:'San Benito',
-    36:'San Bernardino',37:'San Diego',38:'San Francisco',39:'San Joaquin',
-    40:'San Luis Obispo',41:'San Mateo',42:'Santa Barbara',43:'Santa Clara',
-    44:'Santa Cruz',45:'Shasta',46:'Sierra',47:'Siskiyou',48:'Solano',
-    49:'Sonoma',50:'Stanislaus',51:'Sutter',52:'Tehama',53:'Trinity',
-    54:'Tulare',55:'Tuolumne',56:'Ventura',57:'Yolo',58:'Yuba'
-};
 
 export const Search: React.FC = () => {
     const [filters, setFilters] = useState<SearchFilters>({});
@@ -45,6 +33,7 @@ export const Search: React.FC = () => {
             const data = await pesticideService.search({
                 county_cd: currentFilters.county_cd || undefined,
                 prodno: currentFilters.prodno || undefined,
+                product_name: currentFilters.product_name || undefined,
                 start_date: currentFilters.start_date || undefined,
                 end_date: currentFilters.end_date || undefined,
             });
@@ -150,11 +139,8 @@ export const Search: React.FC = () => {
 
                                             {/* Title row */}
                                             <div className="flex items-center gap-3 flex-wrap">
-                                                <h3
-                                                    className="text-base font-bold transition-colors"
-                                                    style={{ color: 'var(--fg)' }}
-                                                >
-                                                    Section {result.comtrs}
+                                                <h3 className="text-base font-bold" style={{ color: 'var(--fg)' }}>
+                                                    {result.product_name || `Product ${result.prodno}`}
                                                 </h3>
                                                 <span
                                                     className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded"
@@ -181,18 +167,35 @@ export const Search: React.FC = () => {
                                                     <Droplets className="w-3.5 h-3.5 opacity-50 shrink-0" />
                                                     <span>{result.lbs_prd_used} lbs</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted">
-                                                    <Hash className="w-3.5 h-3.5 opacity-50 shrink-0" />
-                                                    <span>Product {result.prodno}</span>
+                                                <div className="flex items-center gap-2 text-xs text-muted font-mono">
+                                                    <MapPin className="w-3.5 h-3.5 opacity-50 shrink-0" />
+                                                    <span>{result.cen_lat83?.toFixed(4)}, {result.cen_long83?.toFixed(4)}</span>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div
-                                            className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full shrink-0 transition-all"
-                                            style={{ color: 'var(--muted)' }}
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
+                                            {/* COMTRS */}
+                                            <p className="text-xs font-mono" style={{ color: 'var(--muted)' }}>
+                                                Section {result.comtrs}
+                                            </p>
+
+                                            <div
+                                                className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full shrink-0 transition-all"
+                                                style={{ color: 'var(--muted)' }}
+                                            >
+                                                <a href={`https://www.epa.gov/pesticide-labels/find-pesticide-product-label?search=${encodeURIComponent(result.product_name || String(result.prodno))}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full shrink-0 transition-all"
+                                                    style={{ color: 'var(--muted)' }}
+                                                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent-cta)')}
+                                                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+                                                    onClick={e => e.stopPropagation()}
+                                                    title="View EPA label"
+                                                >
+                                                    <ExternalLink className="w-4 h-4" />
+                                                </a>
+                                            </div>
+
                                         </div>
                                     </div>
                                 </motion.div>

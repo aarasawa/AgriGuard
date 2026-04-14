@@ -9,13 +9,16 @@ export interface PesticideFeature {
     coordinates: [number, number]; // [longitude, latitude]
   };
   properties: {
-    distance_km: ReactNode;
     comtrs: string;
     applic_dt: string;
     lbs_prd_used: number;
     site_code: number;
     county_cd: number;
     prodno: number;
+    distance_km: number;
+    product_name?: string;
+    chemname?: string;
+    cas_number?: string;
   };
 }
 
@@ -59,11 +62,12 @@ export const pesticideService = {
   },
 
   async search(params: {
-    county_cd?: number;
-    prodno?: number;
-    start_date?: string;
-    end_date?: string;
-    limit?: number;
+      county_cd?: number;
+      prodno?: number;
+      product_name?: string;
+      start_date?: string;
+      end_date?: string;
+      limit?: number;
   }): Promise<{ results: any[]; count: number }> {
       const url = new URL(`${API_BASE_URL}/search`);
       Object.entries(params).forEach(([key, value]) => {

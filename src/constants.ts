@@ -7,3 +7,11 @@ export const CALIFORNIA_COUNTIES = [
   "Santa Cruz", "Shasta", "Sierra", "Siskiyou", "Solano", "Sonoma", "Stanislaus", "Sutter", "Tehama",
   "Trinity", "Tulare", "Tuolumne", "Ventura", "Yolo", "Yuba"
 ];
+
+// CDPR county codes
+export const COUNTY_LIST: { code: number; name: string }[] = 
+  CALIFORNIA_COUNTIES.map((name, i) => ({ code: i + 1, name }));
+
+// Quick lookup by code
+export const COUNTY_NAMES: Record<number, string> = 
+  Object.fromEntries(COUNTY_LIST.map(c => [c.code, c.name]));
