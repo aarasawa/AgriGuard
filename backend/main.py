@@ -125,3 +125,46 @@ def get_chemicals(
             prodnos = sorted([row[0] for row in cur.fetchall() if row[0]])
     
     return {"chemicals": prodnos}
+
+@app.get("/search")
+def search_records(
+    county_cd: Optional[int] = Query(None),
+    prodno: Optional[int] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    limit: int = Query(100, le=500)
+):
+    query = """
+        SELECT
+            comtrs, applic_dt, lbs_prd_used,
+            site_code, county_cd, prodno, year
+        FROM pur_applications
+        WHERE cen_lat83 IS NOT NULL
+    """
+    params = []
+
+    if county_cd is not None:
+        query += " AND county_cd = %s"
+        params.append(county_cd)
+    if prodno is not None:
+        query += " AND prodno = %s"
+        params.append(prodno)
+    if start_date:
+        query += " AND TO_DATE(applic_dt, 'DD-MON-YYYY') >= TO_DATE(%s, 'YYYY-MM-DD')"
+        params.append(start_date)
+    if end_date:
+        query += " AND TO_DATE(applic_dt, 'DD-MON-YYYY') <= TO_DATE(%s, 'YYYY-MM-DD')"
+        params.append(end_date)
+
+    query += " ORDER BY applic_dt DESC LIMIT %s"
+    params.append(limit)
+
+    with get_conn() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+    return {
+        "results": [dict(row) for row in rows],
+        "count": len(rows)
+    }

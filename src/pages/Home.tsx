@@ -48,26 +48,31 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-8">
+
+      {/* Header row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-bold tracking-tight">AgriGuard Map</h1>
-          <p className="opacity-70">Visualize historical pesticide applications in your area.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-fg">AgriGuard Map</h1>
+          <p className="text-muted text-sm">Visualize historical pesticide applications in your area.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
+
+          {/* Address search */}
           <form onSubmit={handleAddressSearch} className="relative w-full sm:w-80">
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Search by address..."
-              className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+              className="w-full pl-10 pr-12 py-2.5 bg-surface border border-app rounded-xl text-fg placeholder:text-muted focus:ring-2 outline-none transition-all"
+              style={{ '--tw-ring-color': 'var(--accent-primary)' } as React.CSSProperties}
             />
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <button
               type="submit"
               disabled={isGeocoding}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+              className="btn-cta absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg disabled:opacity-50"
             >
               {isGeocoding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -77,26 +82,35 @@ export const Home: React.FC = () => {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-lg border border-primary/10">
+          {/* Radius slider */}
+          <div className="flex items-center gap-3 bg-surface border border-app p-2 rounded-xl shadow-sm">
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+              }}
+            >
               <Navigation className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium whitespace-nowrap">
+              <span className="text-sm font-medium text-fg whitespace-nowrap">
                 Radius: {radius / 1000}km
               </span>
             </div>
-              <input
-                type="range"
-                min="1000"
-                max="10000"
-                step="1000"
-                value={radius}
-                onChange={(e) => setRadius(parseInt(e.target.value))}
-                className="w-24 sm:w-32 accent-primary"
-              />
+            <input
+              type="range"
+              min="1000"
+              max="10000"
+              step="1000"
+              value={radius}
+              onChange={(e) => setRadius(parseInt(e.target.value))}
+              className="w-24 sm:w-32"
+              style={{ accentColor: 'var(--accent-primary)' }}
+            />
           </div>
         </div>
       </div>
 
+      {/* Map + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3">
           <motion.div
@@ -112,37 +126,54 @@ export const Home: React.FC = () => {
           </motion.div>
         </div>
 
+        {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/10 dark:border-primary/20">
+
+          {/* How it works */}
+          <div
+            className="p-6 rounded-2xl border"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+              borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+            }}
+          >
             <h3 className="text-primary font-semibold flex items-center gap-2 mb-3">
               <Info className="w-5 h-5" />
               How it works
             </h3>
-            <p className="text-sm text-primary-dark dark:text-primary-light leading-relaxed">
+            <p className="text-sm text-muted leading-relaxed">
               This map displays Pesticide Use Report (PUR) data from the California
               Department of Pesticide Regulation. Markers represent pesticide
               application sites at the section level.
             </p>
           </div>
 
-          <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10">
-            <h3 className="font-semibold mb-4">Location Status</h3>
+          {/* Location status */}
+          <div
+            className="p-6 rounded-2xl border"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+              borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+            }}
+          >
+            <h3 className="font-semibold text-fg mb-4">Location Status</h3>
             {userLocation ? (
-              <div className="flex items-center gap-3 text-primary">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-sm font-medium">Location Active</span>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
+                <span className="text-sm font-medium text-primary">Location Active</span>
               </div>
             ) : (
-              <div className="flex items-center gap-3 text-amber-600">
+              <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-sm font-medium">Waiting for location...</span>
+                <span className="text-sm font-medium text-amber-600">Waiting for location...</span>
               </div>
             )}
-            <p className="text-xs opacity-60 mt-3 font-mono">
+            <p className="text-xs text-muted mt-3 font-mono">
               Lat: {userLocation?.[0].toFixed(4) || '---'} <br />
               Lng: {userLocation?.[1].toFixed(4) || '---'}
             </p>
           </div>
+
         </div>
       </div>
     </div>

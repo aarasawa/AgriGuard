@@ -56,5 +56,23 @@ export const pesticideService = {
     }
     const data = await response.json();
     return data.chemicals;
+  },
+
+  async search(params: {
+    county_cd?: number;
+    prodno?: number;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+  }): Promise<{ results: any[]; count: number }> {
+      const url = new URL(`${API_BASE_URL}/search`);
+      Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') {
+              url.searchParams.set(key, String(value));
+          }
+      });
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      return response.json();
   }
 };
