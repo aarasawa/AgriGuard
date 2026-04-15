@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Map } from '../components/Map';
 import { Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { PesticideFeature } from '../services/pesticideService';
+import { PesticideDetailsPanel } from '../components/PesticideDetailsPanel';
 
 export const Home: React.FC = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [radius, setRadius] = useState(5000);
   const [address, setAddress] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<PesticideFeature | null>(null);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -44,6 +47,57 @@ export const Home: React.FC = () => {
     } finally {
       setIsGeocoding(false);
     }
+  };
+
+  const HowItWorksCard: React.FC = () => {
+    return (
+      <div
+        className="p-6 rounded-2xl border"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+          borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+        }}
+      >
+        <h3 className="text-primary font-semibold flex items-center gap-2 mb-3">
+          <Info className="w-5 h-5" />
+          How it works
+        </h3>
+        <p className="text-sm text-muted leading-relaxed">
+          This map displays Pesticide Use Report (PUR) data from the California
+          Department of Pesticide Regulation. Markers represent pesticide
+          application sites at the section level.
+        </p>
+      </div>
+    );
+  };
+
+  const LocationStatusCard: React.FC = () => {
+    return(
+      <div
+        className="p-6 rounded-2xl border"
+        style={{
+          backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+          borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+        }}
+      >
+        <h3 className="font-semibold text-fg mb-4">Location Status</h3>
+        {userLocation ? (
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
+            <span className="text-sm font-medium text-primary">Location Active</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-sm font-medium text-amber-600">Waiting for location...</span>
+          </div>
+        )}
+        <p className="text-xs text-muted mt-3 font-mono">
+          Lat: {userLocation?.[0].toFixed(4) || '---'} <br />
+          Lng: {userLocation?.[1].toFixed(4) || '---'}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -111,70 +165,46 @@ export const Home: React.FC = () => {
       </div>
 
       {/* Map + sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
         <div className="lg:col-span-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Map
-              userLocation={userLocation}
-              radius={radius}
-              onLocationChange={(lat, lon) => setUserLocation([lat, lon])}
-            />
+          <Map
+            userLocation={userLocation}
+            radius={radius}
+            selectedFeature={selectedFeature}
+            onMarkerClick={setSelectedFeature}
+            onCloseDetails={() => setSelectedFeature(null)}
+            onLocationChange={(lat, lon) => setUserLocation([lat, lon])}
+          />
           </motion.div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {selectedFeature ? (
+            <PesticideDetailsPanel
+              selectedFeature={selectedFeature}
+              onClose={() => setSelectedFeature(null)}
+            />
+          ) : null}
 
-          {/* How it works */}
-          <div
-            className="p-6 rounded-2xl border"
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
-              borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
-            }}
-          >
-            <h3 className="text-primary font-semibold flex items-center gap-2 mb-3">
-              <Info className="w-5 h-5" />
-              How it works
-            </h3>
-            <p className="text-sm text-muted leading-relaxed">
-              This map displays Pesticide Use Report (PUR) data from the California
-              Department of Pesticide Regulation. Markers represent pesticide
-              application sites at the section level.
-            </p>
-          </div>
-
-          {/* Location status */}
-          <div
-            className="p-6 rounded-2xl border"
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
-              borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
-            }}
-          >
-            <h3 className="font-semibold text-fg mb-4">Location Status</h3>
-            {userLocation ? (
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
-                <span className="text-sm font-medium text-primary">Location Active</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="text-sm font-medium text-amber-600">Waiting for location...</span>
-              </div>
-            )}
-            <p className="text-xs text-muted mt-3 font-mono">
-              Lat: {userLocation?.[0].toFixed(4) || '---'} <br />
-              Lng: {userLocation?.[1].toFixed(4) || '---'}
-            </p>
-          </div>
-
+          {!selectedFeature && <HowItWorksCard />}
+          {!selectedFeature && <LocationStatusCard />}
         </div>
+
+        {selectedFeature && (
+          <div className="lg:col-span-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+              <HowItWorksCard />
+              <LocationStatusCard />
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

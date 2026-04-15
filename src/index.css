@@ -7,17 +7,17 @@
 
   /* ── Palette ───────────────────────────────────────────────── */
   --color-emerald:        #284139;
-  --color-emerald-dark:   #1a2b25;
+  --color-emerald-dark:   #1A2B25;
   --color-wasabi:         #809076;
-  --color-wasabi-dark:    #6a7862;
+  --color-wasabi-dark:    #6A7862;
   --color-khaki:          #F8E794;
-  --color-khaki-dark:     #e6d47a;
+  --color-khaki-dark:     #E6D47A;
   --color-earth:          #B86830;
-  --color-earth-dark:     #9a5526;
+  --color-earth-dark:     #9A5526;
   --color-noir:           #111A19;
   --color-cream:          #F5F0E8;
 
-  /* ── Semantic tokens (mapped to CSS vars for theme switching) ── */
+  /* ── Semantic tokens (CSS vars for theme switching) ─────────── */
   --color-background:     var(--bg);
   --color-surface:        var(--surface);
   --color-border:         var(--border);
@@ -78,6 +78,35 @@
 
 .dark .leaflet-tile {
   filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: var(--surface) !important;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 0 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  min-width: 0;
+}
+
+.leaflet-popup-tip {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border);
+}
+
+.leaflet-popup-close-button {
+  color: var(--muted) !important;
+  padding: 0.5rem 0.6rem 0 0 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--fg) !important;
+  background: transparent !important;
 }
 
 /* ── Utility classes for semantic tokens ─────────────────────── */

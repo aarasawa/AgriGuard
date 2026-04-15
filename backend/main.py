@@ -39,6 +39,7 @@ def get_records(
         SELECT
             comtrs, applic_dt, lbs_prd_used,
             site_code, county_cd, prodno,
+            product_name, chemname, cas_number,
             cen_lat83, cen_long83,
             ROUND((
                 6371 * acos(
@@ -97,6 +98,9 @@ def get_records(
                     "site_code": row.get("site_code"),
                     "county_cd": row.get("county_cd"),
                     "prodno": row.get("prodno"),
+                    "product_name": row.get("product_name"),
+                    "chemname": row.get("chemname"),
+                    "cas_number": row.get("cas_number"),
                     "distance_km": float(row.get("distance_km", 0))
                 }
             })
@@ -176,6 +180,13 @@ def search_records(
         "results": [dict(row) for row in rows],
         "count": len(rows)
     }
+
+@app.get("/chemical-info")
+def get_chemical_info(cas_number: str = Query(...)):
+    data = fetch_pubchem_data(cas_number)
+    if not data:
+        return {"error": "No data found", "cas_number": cas_number}
+    return data
 
 @lru_cache(maxsize=500)
 def fetch_pubchem_data(cas_number: str):
