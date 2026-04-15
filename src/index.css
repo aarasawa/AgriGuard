@@ -132,7 +132,7 @@
 
   .btn-cta {
     background-color: var(--accent-cta);
-    color: var(--noir);
+    color: var(--bg);
     @apply px-4 py-2 rounded-xl font-semibold transition-colors duration-200;
   }
   .btn-cta:hover {

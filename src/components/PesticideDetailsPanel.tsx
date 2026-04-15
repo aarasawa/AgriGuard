@@ -229,13 +229,7 @@ export const PesticideDetailsPanel: React.FC<PesticideDetailsPanelProps> = ({
               href={chemInfo.pubchem_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors"
-              style={{
-                border: '1px solid var(--accent-primary)',
-                color: 'var(--accent-primary)',
-                textDecoration: 'none',
-                backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)',
-              }}
+              className="btn-cta w-full py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
               Safety Info: PubChem
@@ -249,7 +243,6 @@ export const PesticideDetailsPanel: React.FC<PesticideDetailsPanelProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             className="btn-cta w-full py-2.5 flex items-center justify-center gap-2 rounded-xl shadow-sm text-sm font-semibold"
-            style={{ color: 'var(--noir)', textDecoration: 'none' }}
           >
             <ExternalLink className="w-4 h-4" />
             Search EPA Site
