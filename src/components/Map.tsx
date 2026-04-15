@@ -144,6 +144,13 @@ export const Map: React.FC<MapProps> = ({
   const centerLon = center[1];
 
   useEffect(() => {
+    if (userLocation) {
+      setMapCenter(userLocation);
+      setMapZoom(13);
+    }
+  }, [userLocation]);
+
+  useEffect(() => {
     setLoading(true);
     setError(null);
     pesticideService.getRecords({ lat: centerLat, lon: centerLon, radius_km })
@@ -179,7 +186,7 @@ export const Map: React.FC<MapProps> = ({
       )}
 
       {!loading && count > 0 && (
-        <div className="absolute top-3 right-3 z-[1002] px-3 py-1.5 rounded-full shadow text-xs font-medium"
+        <div className="absolute bottom-3 left-3 z-[1002] px-3 py-1.5 rounded-full shadow text-xs font-medium"
           style={{ backgroundColor: 'var(--surface)', color: 'var(--fg)' }}>
           {count.toLocaleString()} applications within {radius_km}km
         </div>

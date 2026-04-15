@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Map } from '../components/Map';
 import { Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -8,10 +8,16 @@ import { PesticideDetailsPanel } from '../components/PesticideDetailsPanel';
 export const Home: React.FC = () => {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [radius, setRadius] = useState(5000);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [address, setAddress] = useState('');
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<PesticideFeature | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
 
+  {/* Fetch user location */}
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -24,6 +30,62 @@ export const Home: React.FC = () => {
       );
     }
   }, []);
+
+  {/* Fetch address suggestions */}
+  useEffect(() => {
+    if (!address.trim() || address.trim().length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setHighlightedIndex(-1);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(async () => {
+      setIsSearchingSuggestions(true);
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(`${address}, California`)}`,
+          { signal: controller.signal }
+        );
+
+        const data = await response.json();
+        setSuggestions(data || []);
+        setShowSuggestions(true);
+        setHighlightedIndex(-1);
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error("Error fetching suggestions:", error);
+        }
+      } finally {
+        setIsSearchingSuggestions(false);
+      }
+    }, 300);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [address]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+  })
 
   const handleAddressSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +109,47 @@ export const Home: React.FC = () => {
     } finally {
       setIsGeocoding(false);
     }
+  };
+
+  {/* Replace address input with selected suggestion */}
+  const handleSuggestionSelect = (suggestion: any) => {
+    const lat = parseFloat(suggestion.lat);
+    const lon = parseFloat(suggestion.lon);
+
+    setAddress(suggestion.display_name);
+    setUserLocation([lat, lon]);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+  };
+
+  {/* Handle keyboard navigation in suggestions dropdown */}
+  const handleAddressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (!showSuggestions || suggestions.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    setHighlightedIndex((prev) => 
+      prev < suggestions.length - 1 ? prev + 1 : 0
+    );
+  }
+
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    setHighlightedIndex((prev) => 
+      prev > 0 ? prev - 1 : suggestions.length - 1
+    );
+  }
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleSuggestionSelect(suggestions[highlightedIndex]);
+  }
+
+  if (e.key === 'Escape') {
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+  }
   };
 
   const HowItWorksCard: React.FC = () => {
@@ -113,28 +216,93 @@ export const Home: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center gap-4">
 
           {/* Address search */}
-          <form onSubmit={handleAddressSearch} className="relative w-full sm:w-80">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Search by address..."
-              className="w-full pl-10 pr-12 py-2.5 bg-surface border border-app rounded-xl text-fg placeholder:text-muted focus:ring-2 outline-none transition-all"
-              style={{ '--tw-ring-color': 'var(--accent-primary)' } as React.CSSProperties}
-            />
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-            <button
-              type="submit"
-              disabled={isGeocoding}
-              className="btn-cta absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg disabled:opacity-50"
-            >
-              {isGeocoding ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <SearchIcon className="w-4 h-4" />
-              )}
-            </button>
-          </form>
+          <div ref={searchRef} className="relative w-full sm:w-80">
+            <form onSubmit={handleAddressSearch} className="relative">
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onKeyDown={handleAddressKeyDown}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                placeholder="Search by address..."
+                className="w-full pl-10 pr-12 py-2.5 bg-surface border border-app rounded-xl text-fg placeholder:text-muted focus:ring-2 outline-none transition-all"
+                style={{ '--tw-ring-color': 'var(--accent-primary)' } as React.CSSProperties}
+              />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+              <button
+                type="submit"
+                disabled={isGeocoding}
+                className="btn-cta absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg disabled:opacity-50"
+              >
+                {isGeocoding ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <SearchIcon className="w-4 h-4" />
+                )}
+              </button>
+            </form>
+
+            {showSuggestions && (isSearchingSuggestions || suggestions.length > 0) && (
+              <div
+                className="absolute top-full left-0 right-0 mt-2 rounded-xl border shadow-lg z-50 overflow-hidden"
+                style={{
+                  backgroundColor: 'var(--surface)',
+                  borderColor: 'var(--border)',
+                }}
+              >
+                {isSearchingSuggestions && (
+                  <div className="px-4 py-3 text-sm text-muted">
+                    Searching...
+                  </div>
+                )}
+
+                {!isSearchingSuggestions &&
+                  suggestions.map((suggestion, index) => {
+                    const addressObj = suggestion.address ?? {};
+                    const line1 = 
+                      [
+                        addressObj.house_number,
+                        addressObj.road || addressObj.pedestrian || addressObj.cycleway || addressObj.footway,
+                      ]
+                      .filter(Boolean)
+                      .join(' ')
+                      || suggestion.name
+                      || suggestion.display_name.split(',')[0];
+
+                    const line2 = 
+                      [
+                        addressObj.city || addressObj.town || addressObj.village || addressObj.hamlet,
+                        addressObj.state,
+                      ]
+                      .filter(Boolean)
+                      .join(', ');
+
+                    return (
+                      <button
+                        key={suggestion.place_id}
+                        type="button"
+                        onClick={() => handleSuggestionSelect(suggestion)}
+                        className="w-full text-left px-4 py-3 transition-colors"
+                        style={{
+                          backgroundColor:
+                            index === highlightedIndex ? 'var(--bg)' : 'transparent',
+                          color: 'var(--fg)',
+                        }}
+                      >
+                        <div className="text-sm font-medium text-fg">{line1}</div>
+                        <div className="text-xs text-muted">{line2}</div>
+                      </button>
+                    );
+                  })
+                }
+              </div>
+            )}
+          </div>
 
           {/* Radius slider */}
           <div className="flex items-center gap-3 bg-surface border border-app p-2 rounded-xl shadow-sm">
@@ -206,6 +374,7 @@ export const Home: React.FC = () => {
         )}
 
       </div>
+
     </div>
   );
 };
