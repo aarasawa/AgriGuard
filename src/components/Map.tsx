@@ -143,6 +143,7 @@ export const Map: React.FC<MapProps> = ({
   const centerLat = center[0];
   const centerLon = center[1];
 
+  {/* Set map center and zoom when user location is available */}
   useEffect(() => {
     if (userLocation) {
       setMapCenter(userLocation);
@@ -150,6 +151,7 @@ export const Map: React.FC<MapProps> = ({
     }
   }, [userLocation]);
 
+  {/* Fetch pesticide application records whenever the center or radius changes */}
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -165,6 +167,7 @@ export const Map: React.FC<MapProps> = ({
       });
   }, [centerLat, centerLon, radius_km]);
 
+  {/* Handle marker click to show details and center map on the selected application */}
   const handleMarkerClick = (feature: PesticideFeature) => {
     onMarkerClick(feature);
     const [lon, lat] = feature.geometry.coordinates;

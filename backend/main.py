@@ -145,7 +145,7 @@ def search_records(
         SELECT
             comtrs, applic_dt, lbs_prd_used,
             site_code, county_cd, prodno,
-            product_name, year,
+            product_name, chemname, cas_number, year,
             cen_lat83, cen_long83
         FROM pur_applications
         WHERE cen_lat83 IS NOT NULL
@@ -191,20 +191,28 @@ def get_chemical_info(cas_number: str = Query(...)):
 @lru_cache(maxsize=500)
 def fetch_pubchem_data(cas_number: str):
     try:
-        # Step 1 — get CID from CAS
+        # Step 1 — resolve CAS → CID
         cid_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{cas_number}/cids/JSON"
         r = httpx.get(cid_url, timeout=5)
         if r.status_code != 200:
             return None
         cid = r.json()["IdentifierList"]["CID"][0]
 
-        # Step 2 — fetch Safety and Hazards section
-        view_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Safety+and+Hazards"
-        r2 = httpx.get(view_url, timeout=10)
+        # Step 2 — Safety and Hazards (GHS signal word, pictograms, hazard statements)
+        r2 = httpx.get(
+            f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Safety+and+Hazards",
+            timeout=10
+        )
         if r2.status_code != 200:
             return None
 
-        data = r2.json()
+        # Step 3 — Toxicity (symptoms, exposure routes, target organs)
+        r3 = httpx.get(
+            f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Toxicity",
+            timeout=10
+        )
+        tox_data = r3.json() if r3.status_code == 200 else {}
+
         result = {
             "cid": cid,
             "pubchem_url": f"https://pubchem.ncbi.nlm.nih.gov/compound/{cid}#section=Safety-and-Hazards",
@@ -232,6 +240,7 @@ def fetch_pubchem_data(cas_number: str):
                 heading = section.get("TOCHeading", "")
                 info = section.get("Information", [])
 
+                # ── GHS data (from Safety and Hazards) ──
                 if heading == "GHS Classification":
                     for item in info:
                         name = item.get("Name", "")
@@ -248,26 +257,6 @@ def fetch_pubchem_data(cas_number: str):
                                     if markup.get("Extra"):
                                         result["pictograms"].append(markup["Extra"])
 
-                elif heading == "Health Hazards" and info:
-                    texts = get_strings(info)
-                    for text in texts:
-                        if text.startswith("Exposure Routes:"):
-                            result["exposure_routes"] = text.replace("Exposure Routes:", "").strip()
-                        elif text.startswith("Symptoms:"):
-                            result["symptoms"] = text.replace("Symptoms:", "").strip()
-                        elif text.startswith("Target Organs:"):
-                            result["target_organs"] = text.replace("Target Organs:", "").strip()
-
-                elif heading == "Effects of Short Term Exposure" and info:
-                    texts = get_strings(info)
-                    if texts:
-                        result["short_term_effects"] = texts[0]
-
-                elif heading == "Effects of Long Term Exposure" and info:
-                    texts = get_strings(info)
-                    if texts:
-                        result["long_term_effects"] = texts[0]
-
                 elif heading == "First Aid Measures":
                     for item in info:
                         name = item.get("Name", "")
@@ -276,12 +265,52 @@ def fetch_pubchem_data(cas_number: str):
                         if name and text:
                             result["first_aid"][name] = text
 
+                # ── HSDB-style prefixed strings (older compounds, Health Hazards section) ──
+                elif heading == "Health Hazards" and info:
+                    texts = get_strings(info)
+                    for text in texts:
+                        if text.startswith("Exposure Routes:") and not result["exposure_routes"]:
+                            result["exposure_routes"] = text.replace("Exposure Routes:", "").strip()
+                        elif text.startswith("Symptoms:") and not result["symptoms"]:
+                            result["symptoms"] = text.replace("Symptoms:", "").strip()
+                        elif text.startswith("Target Organs:") and not result["target_organs"]:
+                            result["target_organs"] = text.replace("Target Organs:", "").strip()
+
+                # ── Toxicity section headings (most pesticides) ──
+                elif heading == "Hazards Summary" and info:
+                    texts = get_strings(info)
+                    if texts and not result["symptoms"]:
+                        result["symptoms"] = texts[0]
+
+                elif heading == "Skin, Eye, and Respiratory Irritations" and info:
+                    texts = get_strings(info)
+                    if texts and not result["exposure_routes"]:
+                        result["exposure_routes"] = texts[0]
+
+                elif heading == "Target Organ(s)" and info:
+                    texts = get_strings(info)
+                    if texts and not result["target_organs"]:
+                        result["target_organs"] = ", ".join(texts)
+
+                elif heading in ("Effects of Short Term Exposure", "Acute Effects") and info:
+                    texts = get_strings(info)
+                    if texts and not result["short_term_effects"]:
+                        result["short_term_effects"] = texts[0]
+
+                elif heading in ("Effects of Long Term Exposure", "Chronic Effects") and info:
+                    texts = get_strings(info)
+                    if texts and not result["long_term_effects"]:
+                        result["long_term_effects"] = texts[0]
+
                 # recurse into subsections
                 if "Section" in section:
                     walk_sections(section["Section"])
 
-        top_sections = data.get("Record", {}).get("Section", [])
-        walk_sections(top_sections)
+        # Walk Safety and Hazards first (GHS signal word etc.)
+        walk_sections(r2.json().get("Record", {}).get("Section", []))
+
+        # Walk Toxicity second (symptoms, exposure routes — fills gaps left by Safety walk)
+        walk_sections(tox_data.get("Record", {}).get("Section", []))
 
         return result
     except Exception as e:
