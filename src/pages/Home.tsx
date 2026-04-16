@@ -103,10 +103,7 @@ export const Home: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Info cards */}
-      <div className="grid grid-cols-4 md:grid-cols-1 gap-6">
-        <HowItWorksCard />
-      </div>
+      <HowItWorksCard />
 
     </div>
   );

@@ -22,6 +22,9 @@ const inputStyle: React.CSSProperties = {
     borderRadius: '0.5rem',
     padding: '0.5rem 0.75rem',
     width: '100%',
+    maxWidth: '100%',
+    minWidth: '0',
+    boxSizing: 'border-box',
     outline: 'none',
     transition: 'border-color 0.2s',
 };
@@ -66,7 +69,7 @@ export const SearchFiltersComponent: React.FC<SearchFiltersProps> = ({
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style={{ minWidth: 0 }}>
 
                 {/* Product Name */}
                 <div className="space-y-2">
