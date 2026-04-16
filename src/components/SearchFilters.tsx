@@ -4,7 +4,6 @@ import { Filter, X, Calendar, Hash, MapPin, Search as SearchIcon } from 'lucide-
 
 export interface SearchFilters {
     county_cd?: number | '';
-    prodno?: number | '';
     product_name?: string;
     start_date?: string;
     end_date?: string;
@@ -106,24 +105,6 @@ export const SearchFiltersComponent: React.FC<SearchFiltersProps> = ({
                             <option key={c.code} value={c.code}>{c.name}</option>
                         ))}
                     </select>
-                </div>
-
-                {/* Product Number */}
-                <div className="space-y-2">
-                    <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted)' }}>
-                        <span className="flex items-center gap-1.5">
-                            <Hash className="w-3.5 h-3.5" />
-                            Product Number
-                        </span>
-                    </label>
-                    <input
-                        type="number"
-                        name="prodno"
-                        value={filters.prodno ?? ''}
-                        onChange={handleChange}
-                        placeholder="e.g. 28891"
-                        style={inputStyle}
-                    />
                 </div>
 
                 {/* Start Date */}

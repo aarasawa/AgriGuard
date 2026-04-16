@@ -102,6 +102,10 @@
 .leaflet-popup-close-button {
   color: var(--muted) !important;
   padding: 0.5rem 0.6rem 0 0 !important;
+  top: 4px !important;
+  right: 4px !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
 }
 
 .leaflet-popup-close-button:hover {

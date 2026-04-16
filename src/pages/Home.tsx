@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Map } from '../components/Map';
 import { Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { PesticideFeature } from '../services/pesticideService';
 import { PesticideDetailsPanel } from '../components/PesticideDetailsPanel';
 
@@ -16,6 +16,7 @@ export const Home: React.FC = () => {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<PesticideFeature | null>(null);
   const searchRef = useRef<HTMLDivElement | null>(null);
+  const detailsPanelRef = useRef<HTMLDivElement | null>(null);
 
   {/* Fetch user location */}
   useEffect(() => {
@@ -30,6 +31,13 @@ export const Home: React.FC = () => {
       );
     }
   }, []);
+
+  {/* Scroll to details panel when a feature is selected */}
+  useEffect(() => {
+    if (selectedFeature && detailsPanelRef.current) {
+      detailsPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selectedFeature]);
 
   {/* Fetch address suggestions */}
   useEffect(() => {
@@ -125,83 +133,79 @@ export const Home: React.FC = () => {
 
   {/* Handle keyboard navigation in suggestions dropdown */}
   const handleAddressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  if (!showSuggestions || suggestions.length === 0) return;
+    if (!showSuggestions || suggestions.length === 0) return;
 
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    setHighlightedIndex((prev) => 
-      prev < suggestions.length - 1 ? prev + 1 : 0
-    );
-  }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+    }
 
-  if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    setHighlightedIndex((prev) => 
-      prev > 0 ? prev - 1 : suggestions.length - 1
-    );
-  }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+    }
 
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    handleSuggestionSelect(suggestions[highlightedIndex]);
-  }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSuggestionSelect(suggestions[highlightedIndex]);
+    }
 
-  if (e.key === 'Escape') {
-    setShowSuggestions(false);
-    setHighlightedIndex(-1);
-  }
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setHighlightedIndex(-1);
+    }
   };
 
-  const HowItWorksCard: React.FC = () => {
-    return (
-      <div
-        className="p-6 rounded-2xl border"
-        style={{
-          backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
-          borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
-        }}
-      >
-        <h3 className="text-primary font-semibold flex items-center gap-2 mb-3">
-          <Info className="w-5 h-5" />
-          How it works
-        </h3>
-        <p className="text-sm text-muted leading-relaxed">
-          This map displays Pesticide Use Report (PUR) data from the California
-          Department of Pesticide Regulation. Markers represent pesticide
-          application sites at the section level.
-        </p>
-      </div>
-    );
-  };
+  const HowItWorksCard: React.FC = () => (
+    <div
+      className="p-6 rounded-2xl border"
+      style={{
+        backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+        borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+      }}
+    >
+      <h3 className="text-primary font-semibold flex items-center gap-2 mb-3">
+        <Info className="w-5 h-5" />
+        How it works
+      </h3>
+      <p className="text-sm text-muted leading-relaxed">
+        This map displays Pesticide Use Report (PUR) data from the California
+        Department of Pesticide Regulation. Markers represent pesticide
+        application sites at the section level.
+      </p>
+    </div>
+  );
 
-  const LocationStatusCard: React.FC = () => {
-    return(
-      <div
-        className="p-6 rounded-2xl border"
-        style={{
-          backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
-          borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
-        }}
-      >
-        <h3 className="font-semibold text-fg mb-4">Location Status</h3>
-        {userLocation ? (
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
-            <span className="text-sm font-medium text-primary">Location Active</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
-            <span className="text-sm font-medium text-amber-600">Waiting for location...</span>
-          </div>
-        )}
-        <p className="text-xs text-muted mt-3 font-mono">
-          Lat: {userLocation?.[0].toFixed(4) || '---'} <br />
-          Lng: {userLocation?.[1].toFixed(4) || '---'}
-        </p>
-      </div>
-    );
-  };
+  const LocationStatusCard: React.FC = () => (
+    <div
+      className="p-6 rounded-2xl border"
+      style={{
+        backgroundColor: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface))',
+        borderColor: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)'
+      }}
+    >
+      <h3 className="font-semibold text-fg mb-4">Location Status</h3>
+      {userLocation ? (
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--accent-primary)' }} />
+          <span className="text-sm font-medium text-primary">Location Active</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-sm font-medium text-amber-600">Waiting for location...</span>
+        </div>
+      )}
+      <p className="text-xs text-muted mt-3 font-mono">
+        Lat: {userLocation?.[0].toFixed(4) || '---'} <br />
+        Lng: {userLocation?.[1].toFixed(4) || '---'}
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-8">
@@ -264,7 +268,7 @@ export const Home: React.FC = () => {
                 {!isSearchingSuggestions &&
                   suggestions.map((suggestion, index) => {
                     const addressObj = suggestion.address ?? {};
-                    const line1 = 
+                    const line1 =
                       [
                         addressObj.house_number,
                         addressObj.road || addressObj.pedestrian || addressObj.cycleway || addressObj.footway,
@@ -274,7 +278,7 @@ export const Home: React.FC = () => {
                       || suggestion.name
                       || suggestion.display_name.split(',')[0];
 
-                    const line2 = 
+                    const line2 =
                       [
                         addressObj.city || addressObj.town || addressObj.village || addressObj.hamlet,
                         addressObj.state,
@@ -332,47 +336,43 @@ export const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Map + sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
-        <div className="lg:col-span-3">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-          <Map
-            userLocation={userLocation}
-            radius={radius}
-            selectedFeature={selectedFeature}
-            onMarkerClick={setSelectedFeature}
-            onCloseDetails={() => setSelectedFeature(null)}
-            onLocationChange={(lat, lon) => setUserLocation([lat, lon])}
-          />
-          </motion.div>
-        </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Map
+          userLocation={userLocation}
+          radius={radius}
+          selectedFeature={selectedFeature}
+          onMarkerClick={setSelectedFeature}
+          onCloseDetails={() => setSelectedFeature(null)}
+          onLocationChange={(lat, lon) => setUserLocation([lat, lon])}
+        />
+      </motion.div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {selectedFeature ? (
+      {/* Details panel — full width, below map, scrollable */}
+      <AnimatePresence>
+        {selectedFeature && (
+          <motion.div
+            ref={detailsPanelRef}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2 }}
+          >
             <PesticideDetailsPanel
               selectedFeature={selectedFeature}
               onClose={() => setSelectedFeature(null)}
             />
-          ) : null}
-
-          {!selectedFeature && <HowItWorksCard />}
-          {!selectedFeature && <LocationStatusCard />}
-        </div>
-
-        {selectedFeature && (
-          <div className="lg:col-span-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              <HowItWorksCard />
-              <LocationStatusCard />
-            </div>
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
+      {/* Info cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <HowItWorksCard />
+        <LocationStatusCard />
       </div>
 
     </div>
