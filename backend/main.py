@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import psycopg
 import os
 from functools import lru_cache
@@ -7,13 +8,18 @@ import httpx
 from dotenv import load_dotenv
 from typing import Optional
 
-# load .env file from root
+from database import init_pool, close_pool, get_pool
+
 load_dotenv()
 
-# instantiate FastAPI app
-app = FastAPI(title="AgriGuard API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_pool()
+    yield
+    close_pool()
 
-# configure allowed origins, HTTP methods, and headers for requests
+app = FastAPI(title="AgriGuard API", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,13 +27,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# establish a connection to PG db
-def get_conn():
-    return psycopg.connect(os.getenv("DATABASE_URL"))
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.get("/records")
 def get_records(
@@ -69,13 +73,13 @@ def get_records(
         ORDER BY distance_km
     """
     params = [
-        lat, lon, lat, 
-        lat, radius_km, lat, radius_km, 
-        lon, radius_km, lon, radius_km, 
+        lat, lon, lat,
+        lat, radius_km, lat, radius_km,
+        lon, radius_km, lon, radius_km,
         lat, lon, lat, radius_km
     ]
 
-    with get_conn() as conn:
+    with get_pool().connection() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(query, params)
             rows = cur.fetchall()
@@ -114,7 +118,8 @@ def get_records(
             "count": len(features)
         }
     }
-    
+
+
 @app.get("/chemicals")
 def get_chemicals(
     county_cd: Optional[int] = Query(None)
@@ -124,13 +129,14 @@ def get_chemicals(
     if county_cd is not None:
         query += " AND county_cd = %s"
         params.append(county_cd)
-    
-    with get_conn() as conn:
+
+    with get_pool().connection() as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)
             prodnos = sorted([row[0] for row in cur.fetchall() if row[0]])
-    
+
     return {"chemicals": prodnos}
+
 
 @app.get("/search")
 def search_records(
@@ -171,7 +177,7 @@ def search_records(
     query += " ORDER BY applic_dt DESC LIMIT %s"
     params.append(limit)
 
-    with get_conn() as conn:
+    with get_pool().connection() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
             cur.execute(query, params)
             rows = cur.fetchall()
@@ -181,6 +187,7 @@ def search_records(
         "count": len(rows)
     }
 
+
 @app.get("/chemical-info")
 def get_chemical_info(cas_number: str = Query(...)):
     data = fetch_pubchem_data(cas_number)
@@ -188,17 +195,16 @@ def get_chemical_info(cas_number: str = Query(...)):
         return {"error": "No data found", "cas_number": cas_number}
     return data
 
+
 @lru_cache(maxsize=500)
 def fetch_pubchem_data(cas_number: str):
     try:
-        # Step 1 — resolve CAS → CID
         cid_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{cas_number}/cids/JSON"
         r = httpx.get(cid_url, timeout=5)
         if r.status_code != 200:
             return None
         cid = r.json()["IdentifierList"]["CID"][0]
 
-        # Step 2 — Safety and Hazards (GHS signal word, pictograms, hazard statements)
         r2 = httpx.get(
             f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Safety+and+Hazards",
             timeout=10
@@ -206,7 +212,6 @@ def fetch_pubchem_data(cas_number: str):
         if r2.status_code != 200:
             return None
 
-        # Step 3 — Toxicity (symptoms, exposure routes, target organs)
         r3 = httpx.get(
             f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Toxicity",
             timeout=10
@@ -240,7 +245,6 @@ def fetch_pubchem_data(cas_number: str):
                 heading = section.get("TOCHeading", "")
                 info = section.get("Information", [])
 
-                # ── GHS data (from Safety and Hazards) ──
                 if heading == "GHS Classification":
                     for item in info:
                         name = item.get("Name", "")
@@ -265,7 +269,6 @@ def fetch_pubchem_data(cas_number: str):
                         if name and text:
                             result["first_aid"][name] = text
 
-                # ── HSDB-style prefixed strings (older compounds, Health Hazards section) ──
                 elif heading == "Health Hazards" and info:
                     texts = get_strings(info)
                     for text in texts:
@@ -276,7 +279,6 @@ def fetch_pubchem_data(cas_number: str):
                         elif text.startswith("Target Organs:") and not result["target_organs"]:
                             result["target_organs"] = text.replace("Target Organs:", "").strip()
 
-                # ── Toxicity section headings (most pesticides) ──
                 elif heading == "Hazards Summary" and info:
                     texts = get_strings(info)
                     if texts and not result["symptoms"]:
@@ -302,14 +304,10 @@ def fetch_pubchem_data(cas_number: str):
                     if texts and not result["long_term_effects"]:
                         result["long_term_effects"] = texts[0]
 
-                # recurse into subsections
                 if "Section" in section:
                     walk_sections(section["Section"])
 
-        # Walk Safety and Hazards first (GHS signal word etc.)
         walk_sections(r2.json().get("Record", {}).get("Section", []))
-
-        # Walk Toxicity second (symptoms, exposure routes — fills gaps left by Safety walk)
         walk_sections(tox_data.get("Record", {}).get("Section", []))
 
         return result
