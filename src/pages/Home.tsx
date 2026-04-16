@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Map } from '../components/Map';
 import { Navigation, Info, Search as SearchIcon, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { PesticideFeature } from '../services/pesticideService';
+import type { PesticideFeature } from '../types/pesticide';
 import { PesticideDetailsPanel } from '../components/PesticideDetailsPanel';
 
 export const Home: React.FC = () => {

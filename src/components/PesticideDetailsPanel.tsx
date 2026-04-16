@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Calendar, MapPin, Droplets, Info, ExternalLink, FlaskConical } from 'lucide-react';
-import type { PesticideFeature } from '../services/pesticideService';
+import type { PesticideFeature } from '../types/pesticide';
 import { COUNTY_NAMES } from '../constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
