@@ -4,7 +4,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import { pesticideService, PesticideFeature } from '../services/pesticideService';
+import { pesticideService } from '../services/pesticideService';
+import type { PesticideFeature } from '../types/pesticide';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 

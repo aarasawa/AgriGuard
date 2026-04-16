@@ -1,20 +1,15 @@
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { Search } from './pages/Search';
 import { Map as MapIcon, Database, Leaf, Menu, X, Sun, Moon } from 'lucide-react';
 import { cn } from './lib/utils';
-import Cookies from 'js-cookie';
-
-const ThemeContext = createContext<{ darkMode: boolean; toggleDarkMode: () => void }>({
-  darkMode: false,
-  toggleDarkMode: () => {},
-});
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 const Navigation = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { darkMode, toggleDarkMode } = useTheme();
 
   const navItems = [
     { path: '/', label: 'Map View', icon: MapIcon },
@@ -115,25 +110,8 @@ const Navigation = () => {
 };
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = Cookies.get('theme');
-    return saved === 'dark';
-  });
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      Cookies.set('theme', 'dark', { expires: 365 });
-    } else {
-      document.documentElement.classList.remove('dark');
-      Cookies.set('theme', 'light', { expires: 365 });
-    }
-  }, [darkMode]);
-
-  const toggleDarkMode = () => setDarkMode(!darkMode);
-
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
+    <ThemeProvider>
       <Router>
         <div className="min-h-screen bg-app text-fg font-sans transition-colors duration-300">
           <Navigation />
@@ -164,6 +142,6 @@ export default function App() {
           </footer>
         </div>
       </Router>
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

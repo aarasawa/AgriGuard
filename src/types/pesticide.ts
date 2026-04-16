@@ -36,12 +36,12 @@ export interface SearchResult {
   site_code: number;
   county_cd: number;
   prodno: number;
-  product_name?: string;
-  chemname?: string;
-  cas_number?: string;
-  year?: number;
-  cen_lat83?: number;
-  cen_long83?: number;
+  product_name: string | null;
+  year: number;
+  cen_lat83: number;
+  cen_long83: number;
+  cas_number: string | null;
+  chemname: string | null;
 }
 
 export interface SearchParams {
@@ -51,4 +51,17 @@ export interface SearchParams {
   start_date?: string;
   end_date?: string;
   limit?: number;
+}
+export interface ChemInfo {
+  cid: number;
+  pubchem_url: string;
+  signal_word: string | null;
+  pictograms: string[];
+  hazard_statements: string[];
+  symptoms: string | null;
+  exposure_routes: string | null;
+  target_organs: string | null;
+  short_term_effects: string | null;
+  long_term_effects: string | null;
+  first_aid: Record<string, string>;
 }
