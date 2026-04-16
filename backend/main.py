@@ -22,6 +22,8 @@ app = FastAPI(title="AgriGuard API", lifespan=lifespan)
 
 ALLOWED_ORIGINS = [
     "https://agriguard-production-b615.up.railway.app",
+    "https://agriguard.dev",
+    "https://agriguard-production.up.railway.app",
     "http://localhost:5173",
 ]
 
