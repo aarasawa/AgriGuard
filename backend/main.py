@@ -20,9 +20,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="AgriGuard API", lifespan=lifespan)
 
+ALLOWED_ORIGINS = [
+    "https://agriguard-production-b615.up.railway.app",
+    "http://localhost:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"]
 )
