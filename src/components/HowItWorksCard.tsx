@@ -14,9 +14,9 @@ export const HowItWorksCard: React.FC = () => (
       How it works
     </h3>
     <p className="text-sm text-muted leading-relaxed">
-      This map displays Pesticide Use Report (PUR) data from the California
-      Department of Pesticide Regulation. Markers represent pesticide
-      application sites at the centroid of the reported area. Click on a marker to see details about the application. 
+      This map displays Pesticide Use Report (PUR) data from the California Department of Pesticide Regulation. 
+      Markers represent pesticide application sites at the centroid of the reported area. Click on a marker to see details about the application. 
+      If pesticide application clusters do not appear on mobile, press the Current Location button beneath the zoom buttons on the map to requery data for your current location.
     </p>
   </div>
 );
